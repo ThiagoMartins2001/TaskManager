@@ -7,6 +7,7 @@
 3. [Classes e Componentes](#classes-e-componentes)
 4. [Fluxo de Dados](#fluxo-de-dados)
 5. [Endpoints da API](#endpoints-da-api)
+6. [Estrutura do Projeto](#estrutura-do-projeto)
 
 ---
 
@@ -18,9 +19,7 @@ O TaskManager segue a arquitetura em camadas do Spring Boot, implementando o pad
 ┌─────────────────────────────────────┐
 │           Controller Layer          │ ← TaskController.java
 ├─────────────────────────────────────┤
-│           Service Layer             │ ← (Futuras implementações)
-├─────────────────────────────────────┤
-│          Repository Layer           │ ← taskRepository.java
+│          Repository Layer           │ ← TaskRepository.java
 ├─────────────────────────────────────┤
 │            Model Layer              │ ← Task.java
 ├─────────────────────────────────────┤
@@ -103,8 +102,49 @@ services:
 - `image: mysql:8.0`: Versão do MySQL utilizada
 - `MYSQL_DATABASE: taskdb`: Nome do banco criado automaticamente
 - `MYSQL_USER/MYSQL_PASSWORD`: Credenciais do usuário admin
+- `MYSQL_ROOT_PASSWORD: Mudar123`: Senha do usuário root
 - `ports: "5552:3306"`: Mapeia porta 5552 local para 3306 do container
 - `volumes: ./mysql-data:/var/lib/mysql`: Persiste dados na pasta mysql-data
+
+### 3. pom.xml
+
+**Localização**: `pom.xml` (raiz do projeto)
+
+**Função**: Arquivo de configuração do Maven que define:
+- Dependências do projeto
+- Versões das tecnologias
+- Configurações de build
+
+**Dependências Principais**:
+```xml
+<dependencies>
+    <!-- Spring Boot Starter Web -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    
+    <!-- Spring Boot Starter Data JPA -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    
+    <!-- MySQL Connector -->
+    <dependency>
+        <groupId>com.mysql</groupId>
+        <artifactId>mysql-connector-j</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+    
+    <!-- Spring Boot Starter Test -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
+```
 
 ---
 
@@ -156,9 +196,25 @@ public class TaskManagerApplication {
 - `@Id`: Define o campo como chave primária
 - `@GeneratedValue(strategy = GenerationType.IDENTITY)`: Gera ID automaticamente
 
-### 3. taskRepository.java (Repository)
+**Código da Entidade**:
+```java
+@Entity
+public class Task {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    private String title;
+    private String description;
+    private boolean completed;
+    
+    // Getters e Setters
+}
+```
 
-**Localização**: `src/main/java/CodingTechnology/TaskManager/Repository/taskRepository.java`
+### 3. TaskRepository.java (Repository)
+
+**Localização**: `src/main/java/CodingTechnology/TaskManager/Repository/TaskRepository.java`
 
 **Função**: Interface que estende JpaRepository para operações de banco de dados
 
@@ -169,7 +225,8 @@ public class TaskManagerApplication {
 
 **Herança e Funcionalidades**:
 ```java
-public interface taskRepository extends JpaRepository<Task, Long> {
+@Repository
+public interface TaskRepository extends JpaRepository<Task, Long> {
     // Herda automaticamente:
     // - save(Task entity)
     // - findById(Long id)
@@ -202,13 +259,21 @@ public interface taskRepository extends JpaRepository<Task, Long> {
 **Injeção de Dependência**:
 ```java
 @Autowired
-private CodingTechnology.TaskManager.Repository.taskRepository taskRepository;
+private TaskRepository taskRepository;
 ```
 
 **Anotações REST Utilizadas**:
 - `@RestController`: Marca como controlador REST
 - `@RequestMapping("/api/task")`: Define o caminho base
 - `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`: Define métodos HTTP
+- `@ResponseStatus`: Define códigos de status HTTP específicos
+
+**Endpoints Implementados**:
+- `GET /api/task/getAll`: Lista todas as tarefas
+- `POST /api/task`: Cria nova tarefa
+- `GET /api/task/{id}`: Busca tarefa por ID
+- `PUT /api/task/{id}`: Atualiza tarefa
+- `DELETE /api/task/{id}`: Remove tarefa
 
 ---
 
@@ -220,8 +285,8 @@ private CodingTechnology.TaskManager.Repository.taskRepository taskRepository;
 1. Cliente → POST /api/task
 2. TaskController.createTask() recebe JSON
 3. Spring converte JSON para objeto Task
-4. taskRepository.save() persiste no banco
-5. Retorna Task criada com ID gerado
+4. TaskRepository.save() persiste no banco
+5. Retorna Task criada com ID gerado (Status 201)
 ```
 
 ### Fluxo de Busca de Tarefa (GET)
@@ -229,8 +294,8 @@ private CodingTechnology.TaskManager.Repository.taskRepository taskRepository;
 ```
 1. Cliente → GET /api/task/{id}
 2. TaskController.getTaskById() recebe ID
-3. taskRepository.findById() busca no banco
-4. Retorna Task ou 404 se não encontrada
+3. TaskRepository.findById() busca no banco
+4. Retorna Task (Status 200) ou 404 se não encontrada
 ```
 
 ### Fluxo de Atualização (PUT)
@@ -238,10 +303,10 @@ private CodingTechnology.TaskManager.Repository.taskRepository taskRepository;
 ```
 1. Cliente → PUT /api/task/{id}
 2. TaskController.updateTask() recebe ID e dados
-3. taskRepository.findById() busca tarefa existente
+3. TaskRepository.findById() busca tarefa existente
 4. Atualiza campos da tarefa
-5. taskRepository.save() persiste alterações
-6. Retorna Task atualizada ou 404
+5. TaskRepository.save() persiste alterações
+6. Retorna Task atualizada (Status 200) ou 404
 ```
 
 ### Fluxo de Exclusão (DELETE)
@@ -249,8 +314,8 @@ private CodingTechnology.TaskManager.Repository.taskRepository taskRepository;
 ```
 1. Cliente → DELETE /api/task/{id}
 2. TaskController.deleteTask() recebe ID
-3. taskRepository.existsById() verifica existência
-4. taskRepository.deleteById() remove do banco
+3. TaskRepository.existsById() verifica existência
+4. TaskRepository.deleteById() remove do banco
 5. Retorna 204 (sucesso) ou 404 (não encontrada)
 ```
 
@@ -277,6 +342,12 @@ private CodingTechnology.TaskManager.Repository.taskRepository taskRepository;
     "title": "Estudar Spring Boot",
     "description": "Aprender conceitos básicos",
     "completed": false
+  },
+  {
+    "id": 2,
+    "title": "Implementar API REST",
+    "description": "Criar endpoints CRUD",
+    "completed": true
   }
 ]
 ```
@@ -291,11 +362,21 @@ private CodingTechnology.TaskManager.Repository.taskRepository taskRepository;
 1. Recebe JSON no corpo da requisição
 2. Spring converte para objeto Task
 3. Chama `taskRepository.save(task)`
-4. Retorna Task criada com ID
+4. Retorna Task criada com ID (Status 201)
 
 **Corpo da Requisição**:
 ```json
 {
+  "title": "Nova Tarefa",
+  "description": "Descrição da tarefa",
+  "completed": false
+}
+```
+
+**Resposta**:
+```json
+{
+  "id": 3,
   "title": "Nova Tarefa",
   "description": "Descrição da tarefa",
   "completed": false
@@ -330,6 +411,15 @@ private CodingTechnology.TaskManager.Repository.taskRepository taskRepository;
 4. Salva alterações
 5. Retorna Task atualizada ou 404
 
+**Corpo da Requisição**:
+```json
+{
+  "title": "Tarefa Atualizada",
+  "description": "Nova descrição",
+  "completed": true
+}
+```
+
 ### 5. DELETE /api/task/{id}
 
 **Função**: Remove tarefa do sistema
@@ -345,6 +435,39 @@ private CodingTechnology.TaskManager.Repository.taskRepository taskRepository;
 **Respostas**:
 - **204 No Content**: Tarefa removida com sucesso
 - **404 Not Found**: Tarefa não encontrada
+
+---
+
+## 📁 Estrutura do Projeto
+
+### Organização de Pacotes
+
+```
+CodingTechnology.TaskManager/
+├── Controller/
+│   └── TaskController.java          # Controlador REST
+├── Model/
+│   └── Task.java                    # Entidade JPA
+├── Repository/
+│   └── TaskRepository.java          # Interface de acesso a dados
+└── TaskManagerApplication.java      # Classe principal
+```
+
+### Estrutura de Recursos
+
+```
+src/main/resources/
+├── application.properties           # Configurações da aplicação
+├── static/                         # Arquivos estáticos (futuro)
+└── templates/                      # Templates (futuro)
+```
+
+### Estrutura de Testes
+
+```
+src/test/java/CodingTechnology/TaskManager/
+└── TaskManagerApplicationTests.java # Testes da aplicação
+```
 
 ---
 
@@ -372,6 +495,7 @@ private CodingTechnology.TaskManager.Repository.taskRepository taskRepository;
 5. **Testes**: Implementar testes unitários e de integração
 6. **Documentação API**: Integrar Swagger/OpenAPI
 7. **Segurança**: Implementar autenticação e autorização
+8. **Interface Web**: Desenvolver frontend para interação
 
 ### Estrutura Futura
 
@@ -384,11 +508,28 @@ TaskManager/
 │   ├── Model/
 │   ├── DTO/              ← Objetos de transferência
 │   ├── Exception/        ← Tratamento de erros
-│   └── Config/           ← Configurações
+│   ├── Config/           ← Configurações
+│   └── Security/         ← Segurança
+├── src/main/resources/
+│   ├── static/           ← Frontend
+│   └── templates/        ← Templates
+└── src/test/
+    ├── unit/             ← Testes unitários
+    └── integration/      ← Testes de integração
 ```
+
+### Funcionalidades Futuras
+
+- **Filtros e Paginação**: Para listagem de tarefas
+- **Categorização**: Agrupar tarefas por categoria
+- **Prioridades**: Definir níveis de prioridade
+- **Datas**: Adicionar datas de criação e conclusão
+- **Usuários**: Sistema de autenticação e autorização
+- **Notificações**: Alertas para tarefas pendentes
 
 ---
 
 **Documentação criada por**: CodingTechnology  
-**Versão**: 1.0  
-**Data**: 2024
+**Versão**: 1.1  
+**Data**: 2024  
+**Última Atualização**: Dezembro 2024
