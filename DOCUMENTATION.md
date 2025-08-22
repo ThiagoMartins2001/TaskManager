@@ -529,7 +529,7 @@ TaskManager/
 
 ---
 
-**Documentação criada por**: CodingTechnology  
+**Documentação criada por**: ThiagoMartins2001  
 **Versão**: 1.1  
 **Data**: 2024  
 **Última Atualização**: Dezembro 2024

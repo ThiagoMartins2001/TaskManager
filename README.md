@@ -233,7 +233,7 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 
 ## 👨‍💻 Autor
 
-**CodingTechnology** - [GitHub](https://github.com/CodingTechnology)
+**ThiagoMartins2001** - [GitHub](https://github.com/ThiagoMartins2001)
 
 ---
 
